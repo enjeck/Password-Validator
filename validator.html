@@ -1,0 +1,168 @@
+<html>
+
+<body>
+    <div>
+        <div id="main">
+            <h2>
+                Password Validator
+            </h2>
+            <div id="inputArea">
+                <input id="passwordInput" type="text">
+                <button id="checkBtn">Validate</button>
+            </div>
+            <div>
+                <div class="criteria">
+                    <p class="check" id="check-1"> ❌ </p>
+                    <p>
+                        Password has 8-16 or more characters
+                    </p>
+                </div>
+                <div class="criteria">
+                    <p class="check" id="check-2"> ❌ </p>
+                    <p>
+                        Password contains letters of latin alphabet and at least one digit
+                    </p>
+                </div>
+                <div class="criteria">
+                    <p class="check" id="check-3"> ❌ </p>
+                    <p>
+                        Password does not have an English letter
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+<style>
+    body {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    #main {
+        max-width: 400px;
+        padding: 15px;
+    }
+
+    .check {
+        display: inline-block;
+        margin-right: 10px !important;
+    }
+
+    .criteria {
+        display: flex;
+        line-height: 25px;
+        margin: 0;
+        padding: 0;
+        margin-left: 20px;
+        font-size: 13px;
+    }
+
+    .criteria>p {
+        padding: 0;
+        margin: 0;
+    }
+
+    #inputArea {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+
+    #passwordInput,
+    #checkBtn {
+        padding: 10px;
+    }
+</style>
+<script>
+    // ❌ = U+274C
+    const cross_emoji = String.fromCodePoint(parseInt("0x274C", 16))
+    // ✅ = U+2705
+    const tick_emoji = String.fromCodePoint(parseInt("0x2705", 16))
+
+    const btn = document.getElementById("checkBtn");
+    const input = document.getElementById("passwordInput");
+    btn.addEventListener("click", checkPassword);
+
+    // Create sets of numbers and latin characters used for checking
+    const alphas = Array.from(Array(26)).map((e, i) => i + 65);
+    let alphabet = alphas.map((x) => String.fromCharCode(x));
+    alphabet = new Set(alphabet);
+    let numbers = Array.from(Array(10)).map((e, i) => i.toString());
+    numbers = new Set(numbers)
+
+    // Used to show X's or tick feedback
+    options = [0, 0, 0, 0];
+    async function checkPassword() {
+        password = input.value;
+        options[0] = password.length < 8 || password.length > 16 ? 0 : 1;
+        options[1] = isAlphaNum(password) ? 1 : 0;
+        options[2] = await hasEnglishWord(password) ? 0 : 1;
+        giveFeedback(options)
+    }
+
+    // Show ticks or crosses that indicate 
+    // what criteria the current password passes
+    function giveFeedback(arr) {
+        for (let i = 1; i <= arr.length; i++) {
+            const idty = "check-" + (i.toString());
+            const element = document.getElementById(idty);
+            element.textContent = arr[i - 1] ? tick_emoji : cross_emoji;
+        }
+    }
+
+    async function hasEnglishWord(password){
+        const splitPassword = password.split(/(\d+)/)
+        const len = splitPassword.length
+        for (let i = 0; i < len; i++) {
+            const pw = splitPassword[i]
+            if (pw && !numbers.has(pw[0])) {
+                if (await isEnglishWord(pw)) {
+                    return true;
+                }
+
+            }
+        }
+        return false
+    }
+    async function isEnglishWord(password) {
+        let url = "https://api.dictionaryapi.dev/api/v2/entries/en/" + password
+        let response = await fetch(url);
+        response = await response.json();
+        // If a JSON response has the "title" property, then the dictionary API 
+        // couldn't find that word and we treat it as not a valid English word
+        if (response.hasOwnProperty("title")) {
+            return false;
+        }
+
+        return true;
+    }
+
+    // Checks if a password is only made up 
+    // of latin characters and numbers
+    function isAlphaNum(password) {
+        let isAlpha = false;
+        let isNum = false;
+        let isLatin = true;
+        Array.from(password).forEach((char, idx) => {
+            char = char.toUpperCase();
+            if (alphabet.has(char)) {
+                isAlpha = true;
+            }
+            if (numbers.has(char)) {
+                isNum = true;
+            }
+
+            // Fail non latin characters like emojis, hypens etc
+            if (!alphabet.has(char) && !numbers.has(char)) {
+                isLatin = false;
+            }
+        });
+        return isAlpha && isNum && isLatin;
+    }
+
+</script>
+
+</html>
